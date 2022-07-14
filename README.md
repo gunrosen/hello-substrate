@@ -3,7 +3,8 @@
 [![Try on playground](https://img.shields.io/badge/Playground-Node_Template-brightgreen?logo=Parity%20Substrate)](https://docs.substrate.io/playground/) [![Matrix](https://img.shields.io/matrix/substrate-technical:matrix.org)](https://matrix.to/#/#substrate-technical:matrix.org)
 
 A fresh FRAME-based [Substrate](https://www.substrate.io/) node, ready for hacking :rocket:
-
+## My note
+`cargo check -p node-template-runtime`
 ## Getting Started
 
 Follow the steps below to get started with the Node Template, or get it up and running right from
