@@ -4,7 +4,11 @@
 
 A fresh FRAME-based [Substrate](https://www.substrate.io/) node, ready for hacking :rocket:
 ## My note
-`cargo check -p node-template-runtime`
+`cargo build --release`
+
+release flag to optimze build. When development we can ignore release
+
+`car go check -p node-template-runtime`
 ## Getting Started
 
 Follow the steps below to get started with the Node Template, or get it up and running right from
