@@ -8,7 +8,7 @@ A fresh FRAME-based [Substrate](https://www.substrate.io/) node, ready for hacki
 
 release flag to optimze build. When development we can ignore release
 
-`car go check -p node-template-runtime`
+`cargo check -p node-template-runtime`
 ## Pallet coupling
 Associated type
 Add vao runtime, phai co impl cho runtime voi 1 instance cu the

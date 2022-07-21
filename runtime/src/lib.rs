@@ -271,6 +271,7 @@ impl pallet_kitties::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type TimeProvider = Timestamp;
+	type KittyLimit = ConstU32<3>; // maximum 3 kitties per account
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

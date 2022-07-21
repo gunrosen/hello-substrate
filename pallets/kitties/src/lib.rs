@@ -21,6 +21,8 @@ use scale_info::TypeInfo;
 pub type Id = u32;
 use frame_support::traits::Currency;
 use frame_support::traits::Time;
+use frame_support::traits::Get;
+
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 type MomentOf<T> =  <<T as Config>::TimeProvider as Time>::Moment;
@@ -51,6 +53,8 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		type Currency: Currency<Self::AccountId>;
 		type TimeProvider: Time;
+		#[pallet::constant]
+		type KittyLimit: Get<u32>;
 	}
 
 	#[pallet::pallet]
@@ -98,6 +102,7 @@ pub mod pallet {
 		KittyNotFound,
 		KittyTransferFail,
 		KittyWrongOwner,
+		KittyOwnedTooLarge,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -117,6 +122,7 @@ pub mod pallet {
 			let gender = Self::calculate_gender(&dna)?;
 			let kitty = Kitty::<T> { dna: dna.clone(), price: 0u32.into(), gender, owner: who.clone(), created_date: T::TimeProvider::now()  };
             ensure!(!Kitties::<T>::contains_key(&kitty.dna), Error::<T>::KittyDnaAlreadyExist);
+			ensure!(KittiesOwned::<T>::get(&who).len() < T::KittyLimit::get() as usize, Error::<T>::KittyOwnedTooLarge);
             let current_id = KittyId::<T>::get();
             let next_id = current_id + 1;
 
