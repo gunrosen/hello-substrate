@@ -19,6 +19,9 @@ use frame_support::inherent::Vec;
 use frame_system::pallet_prelude::*;
 use scale_info::TypeInfo;
 pub type Id = u32;
+use frame_support::traits::Currency;
+
+type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -29,7 +32,7 @@ pub mod pallet {
 	pub struct Kitty<T:Config> {
 		dna: Vec<u8>,
 		owner: T::AccountId,
-		price: u32,
+		price: BalanceOf<T>,
 		gender: Gender,
 	}
 	#[derive(Clone, Encode, Decode, PartialEq, Copy, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -43,6 +46,7 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type Currency: Currency<Self::AccountId>;
 	}
 
 	#[pallet::pallet]
@@ -100,14 +104,14 @@ pub mod pallet {
 		/// An example dispatchable that takes a singles value as a parameter, writes the value to
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-		pub fn creat_new_kitty(origin: OriginFor<T>, dna: Vec<u8>) -> DispatchResult {
+		pub fn create_new_kitty(origin: OriginFor<T>, dna: Vec<u8>) -> DispatchResult {
 			// Check that the extrinsic was signed and get the signer.
 			// This function will return an error if the extrinsic is not signed.
 			// https://docs.substrate.io/v3/runtime/origins
 			let who = ensure_signed(origin)?;
-
+			log::info!("total balance:{:?}", T::Currency::total_balance(&who));
 			let gender = Self::calculate_gender(&dna)?;
-			let kitty = Kitty::<T> { dna: dna.clone(), price: 0, gender, owner: who.clone() };
+			let kitty = Kitty::<T> { dna: dna.clone(), price: 0u32.into(), gender, owner: who.clone() };
             ensure!(!Kitties::<T>::contains_key(&kitty.dna), Error::<T>::KittyDnaAlreadyExist);
             let current_id = KittyId::<T>::get();
             let next_id = current_id + 1;
