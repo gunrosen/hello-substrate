@@ -20,8 +20,10 @@ use frame_system::pallet_prelude::*;
 use scale_info::TypeInfo;
 pub type Id = u32;
 use frame_support::traits::Currency;
+use frame_support::traits::Time;
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+type MomentOf<T> =  <<T as Config>::TimeProvider as Time>::Moment;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -34,6 +36,7 @@ pub mod pallet {
 		owner: T::AccountId,
 		price: BalanceOf<T>,
 		gender: Gender,
+		created_date: MomentOf<T>,
 	}
 	#[derive(Clone, Encode, Decode, PartialEq, Copy, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	pub enum Gender {
@@ -47,6 +50,7 @@ pub mod pallet {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		type Currency: Currency<Self::AccountId>;
+		type TimeProvider: Time;
 	}
 
 	#[pallet::pallet]
@@ -111,7 +115,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			log::info!("total balance:{:?}", T::Currency::total_balance(&who));
 			let gender = Self::calculate_gender(&dna)?;
-			let kitty = Kitty::<T> { dna: dna.clone(), price: 0u32.into(), gender, owner: who.clone() };
+			let kitty = Kitty::<T> { dna: dna.clone(), price: 0u32.into(), gender, owner: who.clone(), created_date: T::TimeProvider::now()  };
             ensure!(!Kitties::<T>::contains_key(&kitty.dna), Error::<T>::KittyDnaAlreadyExist);
             let current_id = KittyId::<T>::get();
             let next_id = current_id + 1;
