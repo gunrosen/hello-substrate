@@ -138,7 +138,7 @@ pub mod pallet {
 		}
 
 		/// Put number into storage map
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		#[pallet::weight(47_000_000 + T::DbWeight::get().reads_writes(3,3)))]
 		pub fn transfer_kitty_to_friend(origin: OriginFor<T>, to: T::AccountId, dna: Vec<u8>) -> DispatchResult{
 			let from = ensure_signed(origin)?;
 			let mut kitty = Kitties::<T>::get(&dna).ok_or(Error::<T>::KittyNotFound)?;
@@ -157,7 +157,7 @@ pub mod pallet {
 			Kitties::<T>::insert(&dna, kitty);
 			KittiesOwned::<T>::insert(&to, to_owned);
 			KittiesOwned::<T>::insert(&from, from_owned);
-			log::info!("transfer successful: from {:?} to {:?}", &from, &to);
+			// log::info!("transfer successful: from {:?} to {:?}", &from, &to);
 
 			Self::deposit_event(Event::KittyTransferred{from, to, kitty: dna });
 			Ok(())

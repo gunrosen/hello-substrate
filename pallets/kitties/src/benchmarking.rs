@@ -6,6 +6,7 @@ use super::*;
 use crate::Pallet as Kitty;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_system::RawOrigin;
+use frame_benchmarking::account;
 
 benchmarks! {
 	bm_create_kity {
@@ -22,8 +23,8 @@ benchmarks! {
 		let from_user: T::AccountId = whitelisted_caller();
 		let from_user_origin = <T as frame_system::Config>::Origin::from(RawOrigin::Signed(from_user.clone()));
 		Kitty::<T>::create_new_kitty(from_user_origin, dna.clone());
-		// let to_user: T::AccountId = account("receiver", 0 , 0);
-		let to_user: T::AccountId = whitelisted_caller();
+		let to_user: T::AccountId = account("receiver", 0 , 0);
+		// let to_user: T::AccountId = whitelisted_caller();
 	}: transfer_kitty_to_friend(RawOrigin::Signed(from_user.clone()), to_user.clone(), dna.clone())
 	// Check
 	verify {
