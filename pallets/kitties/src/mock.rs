@@ -48,9 +48,12 @@ impl system::Config for Test {
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
-
+// Mock run-time Kitty
 impl pallet_template::Config for Test {
 	type Event = Event;
+	type Currency = Balances;
+	type TimeProvider = Timestamp;
+	type KittyLimit = ConstU32<3>; // maximum 3 kitties per account
 }
 
 // Build genesis storage according to the mock runtime.
