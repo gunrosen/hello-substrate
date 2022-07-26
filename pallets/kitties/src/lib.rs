@@ -157,6 +157,7 @@ pub mod pallet {
 			Kitties::<T>::insert(&dna, kitty);
 			KittiesOwned::<T>::insert(&to, to_owned);
 			KittiesOwned::<T>::insert(&from, from_owned);
+			log::info!("transfer successful: from {:?} to {:?}", &from, &to);
 
 			Self::deposit_event(Event::KittyTransferred{from, to, kitty: dna });
 			Ok(())
