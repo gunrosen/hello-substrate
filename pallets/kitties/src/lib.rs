@@ -22,7 +22,7 @@ pub type Id = u32;
 use frame_support::traits::Currency;
 use frame_support::traits::Time;
 use frame_support::traits::Get;
-
+use frame_support::dispatch::fmt;
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 type MomentOf<T> =  <<T as Config>::TimeProvider as Time>::Moment;
@@ -30,8 +30,8 @@ type MomentOf<T> =  <<T as Config>::TimeProvider as Time>::Moment;
 #[frame_support::pallet]
 pub mod pallet {
 	pub use super::*;
-
-	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+	// use std;
+	#[derive(Clone, Encode, Decode, PartialEq, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
 	pub struct Kitty<T:Config> {
 		dna: Vec<u8>,
@@ -39,6 +39,17 @@ pub mod pallet {
 		price: BalanceOf<T>,
 		gender: Gender,
 		created_date: MomentOf<T>,
+	}
+	impl<T:Config> fmt::Debug for Kitty<T>{
+		fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+			f.debug_struct("Kitty")
+				.field("dna", &self.dna)
+				.field("owner", &self.owner)
+				.field("price", &self.price)
+				.field("gender", &self.gender)
+				.field("created_date", &self.created_date)
+				.finish()
+		}
 	}
 	#[derive(Clone, Encode, Decode, PartialEq, Copy, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	pub enum Gender {
@@ -112,7 +123,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// An example dispatchable that takes a singles value as a parameter, writes the value to
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		#[pallet::weight(35_802_000 + T::DbWeight::get().reads_writes(4,3))]
 		pub fn create_new_kitty(origin: OriginFor<T>, dna: Vec<u8>) -> DispatchResult {
 			// Check that the extrinsic was signed and get the signer.
 			// This function will return an error if the extrinsic is not signed.
@@ -126,6 +137,7 @@ pub mod pallet {
             let current_id = KittyId::<T>::get();
             let next_id = current_id + 1;
 
+			log::info!("new kitty: {:?}", kitty);
 			// Update storage.
 			KittiesOwned::<T>::append(&who, kitty.dna.clone());
 			Kitties::<T>::insert(kitty.dna.clone(), kitty);
@@ -138,7 +150,7 @@ pub mod pallet {
 		}
 
 		/// Put number into storage map
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		#[pallet::weight(47_000_000 + T::DbWeight::get().reads_writes(3,3))]
 		pub fn transfer_kitty_to_friend(origin: OriginFor<T>, to: T::AccountId, dna: Vec<u8>) -> DispatchResult{
 			let from = ensure_signed(origin)?;
 			let mut kitty = Kitties::<T>::get(&dna).ok_or(Error::<T>::KittyNotFound)?;
@@ -157,6 +169,7 @@ pub mod pallet {
 			Kitties::<T>::insert(&dna, kitty);
 			KittiesOwned::<T>::insert(&to, to_owned);
 			KittiesOwned::<T>::insert(&from, from_owned);
+			// log::info!("transfer successful: from {:?} to {:?}", &from, &to);
 
 			Self::deposit_event(Event::KittyTransferred{from, to, kitty: dna });
 			Ok(())

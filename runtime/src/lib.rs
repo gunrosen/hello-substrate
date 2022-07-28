@@ -274,6 +274,10 @@ impl pallet_kitties::Config for Runtime {
 	type KittyLimit = ConstU32<3>; // maximum 3 kitties per account
 }
 
+impl pallet_demo::Config for Runtime {
+	type Event = Event;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -292,6 +296,7 @@ construct_runtime!(
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
 		Kitties: pallet_kitties,
+		Demo: pallet_demo,
 	}
 );
 
@@ -337,6 +342,8 @@ mod benches {
 		[pallet_balances, Balances]
 		[pallet_timestamp, Timestamp]
 		[pallet_template, TemplateModule]
+		[pallet_kitties, Kitties],
+		[pallet_demo, Demo],
 	);
 }
 
