@@ -6,6 +6,8 @@ A fresh FRAME-based [Substrate](https://www.substrate.io/) node, ready for hacki
 ## My note
 `cargo build --release`
 
+`./target/release/node-template --dev`
+
 release flag to optimze build. When development we can ignore release
 
 `cargo check -p node-template-runtime`

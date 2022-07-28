@@ -25,7 +25,7 @@ use sp_version::RuntimeVersion;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
-	construct_runtime, parameter_types,
+	construct_runtime, parameter_types, ord_parameter_types,
 	traits::{
 		ConstU128, ConstU32, ConstU64, ConstU8, KeyOwnerProofSystem, Randomness, StorageInfo,
 	},
@@ -36,6 +36,7 @@ pub use frame_support::{
 	StorageValue,
 };
 pub use frame_system::Call as SystemCall;
+pub use frame_system::EnsureSignedBy;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::CurrencyAdapter;
@@ -143,6 +144,12 @@ parameter_types! {
 	pub BlockLength: frame_system::limits::BlockLength = frame_system::limits::BlockLength
 		::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
 	pub const SS58Prefix: u8 = 42;
+
+	// For pallet-nicks
+	pub const NickReservationFee: u64 = 200;
+	pub const NickMinLength: u32 = 4;
+	pub const NickMaxLength: u32 = 20;
+
 }
 
 // Configure FRAME pallets to include in runtime.
@@ -234,6 +241,38 @@ impl pallet_timestamp::Config for Runtime {
 	type MinimumPeriod = ConstU64<{ SLOT_DURATION / 2 }>;
 	type WeightInfo = ();
 }
+ord_parameter_types! {
+		pub const One: u64 = 1;
+}
+impl pallet_nicks::Config for Runtime {
+	// The runtime must supply this pallet with an Event type that satisfies the pallet's requirements.
+	type Event = Event;
+
+	// The currency type that will be used to place deposits on nicks.
+	// It must implement ReservableCurrency.
+	// https://substrate.dev/rustdocs/v2.0.0/frame_support/traits/trait.ReservableCurrency.html
+	// The Balances pallet implements the ReservableCurrency trait.
+	// https://substrate.dev/rustdocs/v2.0.0/pallet_balances/index.html#implementations-2
+	type Currency = pallet_balances::Pallet<Self>; // or Balances
+
+	// The amount required to reserve a nick.
+	type ReservationFee = NickReservationFee;
+
+	// A callback that will be invoked when a deposit is forfeited.
+	type Slashed = ();
+
+	// Origins are used to identify network participants and control access.
+	// This is used to identify the pallet's admin.
+	// https://substrate.dev/docs/en/knowledgebase/runtime/origin
+	// Configure the FRAME System Root origin as the Nick pallet admin.
+	type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+
+	// This parameter is used to configure a nick's minimum length.
+	type MinLength = NickMinLength;
+
+	// This parameter is used to configure a nick's maximum length.
+	type MaxLength = NickMaxLength;
+}
 
 impl pallet_balances::Config for Runtime {
 	type MaxLocks = ConstU32<50>;
@@ -297,6 +336,7 @@ construct_runtime!(
 		TemplateModule: pallet_template,
 		Kitties: pallet_kitties,
 		Demo: pallet_demo,
+		Nicks: pallet_nicks,
 	}
 );
 
