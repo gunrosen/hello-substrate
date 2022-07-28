@@ -141,7 +141,12 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			log::info!("total balance:{:?}", T::Currency::total_balance(&who));
 			let gender = Self::calculate_gender(&dna)?;
-			let (dna_random, block_number) = T::RandomProvider::random(b"random_1");
+			// Get nonce_encoded
+			let nonce = Nonce::<T>::get();
+			Nonce::<T>::put(nonce.wrapping_add(1));
+			let nonce_encoded = nonce.encode();
+			log::info!("nonce:{:?} and nonce_encoded:{:?}", nonce, nonce_encoded);
+			let (dna_random, block_number) = T::RandomProvider::random(&nonce_encoded);
 			log::info!("random at block_number:{:?}", block_number);
 			let kitty = Kitty::<T> { name: dna.clone(), dna: dna_random.clone(), price: 0u32.into(), gender, owner: who.clone(), created_date: T::TimeProvider::now()  };
             ensure!(!Kitties::<T>::contains_key(&kitty.dna), Error::<T>::KittyDnaAlreadyExist);
@@ -198,7 +203,7 @@ impl<T> Pallet<T> {
 		Ok(res)
 	}
 
-	//  Use nonce in randomness implementation
+	// Use nonce in randomness implementation
 	// fn get_and_increment_nonce() -> Vec<u8> {
 	// 	let nonce = Nonce::<T>::get();
 	// 	Nonce::<T>::put(nonce.wrapping_add(1));
