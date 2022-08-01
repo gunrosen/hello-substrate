@@ -22,10 +22,12 @@ benchmarks! {
 		let dna: Vec<u8> = b"Hung Pham".to_vec();
 		let from_user: T::AccountId = whitelisted_caller();
 		let from_user_origin = <T as frame_system::Config>::Origin::from(RawOrigin::Signed(from_user.clone()));
-		Kitty::<T>::create_new_kitty(from_user_origin, dna.clone());
+		let _ = Kitty::<T>::create_new_kitty(from_user_origin, dna.clone());
 		let to_user: T::AccountId = account("receiver", 0 , 0);
-		// let to_user: T::AccountId = whitelisted_caller();
-	}: transfer_kitty_to_friend(RawOrigin::Signed(from_user.clone()), to_user.clone(), dna.clone())
+		// Find dns hash
+		let owner_kittes = KittiesOwned::<T>::get(from_user.clone());
+		let dna_hash = owner_kittes[0];
+	}: transfer_kitty_to_friend(RawOrigin::Signed(from_user.clone()), to_user.clone(), dna_hash)
 	// Check
 	verify {
 		assert_eq!(KittyId::<T>::get(), 1);
