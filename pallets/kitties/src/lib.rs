@@ -172,6 +172,7 @@ pub mod pallet {
 			let from = ensure_signed(origin)?;
 			let mut kitty = Kitties::<T>::get(&dna).ok_or(Error::<T>::KittyNotFound)?;
 			ensure!(kitty.owner == from, Error::<T>::KittyWrongOwner);
+			ensure!(kitty.owner != to, Error::<T>::KittyTransferFail);
 			let mut from_owned = KittiesOwned::<T>::get(&from);
 			let exist_dna = from_owned.iter().position(|ids| *ids == dna);
 			match exist_dna {
