@@ -24,6 +24,7 @@ use frame_support::traits::Time;
 use frame_support::traits::Get;
 use frame_support::traits::Randomness;
 use frame_support::dispatch::fmt;
+use sp_core::sr25519;
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 type MomentOf<T> =  <<T as Config>::TimeProvider as Time>::Moment;
@@ -124,6 +125,53 @@ pub mod pallet {
 		KittyTransferFail,
 		KittyWrongOwner,
 		KittyOwnedTooLarge,
+	}
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig {
+		pub genesis_kitties: u32,
+	}
+
+	#[cfg(feature = "std")]
+	impl Default for GenesisConfig {
+		fn default() -> Self {
+			GenesisConfig { genesis_kitties: 0u32}
+		}
+	}
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+		fn build(&self) {
+			// let alice_account = "//Alice"; //get_account_id_from_seed::<sr25519::Public>("Alice");
+			// let number_of_kitty = &self.genesis_kitties;
+			// let i = 0;
+			// loop {
+			// 	if (i >= number_of_kitty) {
+			// 		break;
+			// 	}
+			// 	let current_id = KittyId::<T>::get();
+			// 	let next_id = current_id + 1;
+			//
+			// 	let nonce = Nonce::<T>::get();
+			// 	Nonce::<T>::put(nonce.wrapping_add(1));
+			// 	let nonce_encoded = nonce.encode();
+			// 	log::info!("nonce:{:?} and nonce_encoded:{:?}", nonce, nonce_encoded);
+			// 	let (dna_random, block_number) = T::RandomProvider::random(&nonce_encoded);
+			// 	log::info!("random at block_number:{:?}", block_number);
+			// 	let gender = Self::calculate_gender(b"hello".to_vec())?;
+			//
+			// 	let kitty = Kitty::<T> {
+			// 		name: "hello",
+			// 		dna: dna_random.clone(),
+			// 		price: 0u32.into(),
+			// 		gender,
+			// 		owner: alice_account,
+			// 		created_date: T::TimeProvider::now()
+			// 	};
+			// 	KittiesOwned::<T>::append(&alice_account, kitty.dna.clone());
+			// 	Kitties::<T>::insert(kitty.dna.clone(), kitty);
+			// 	KittyId::<T>::put(next_id);
+			// }
+		}
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
