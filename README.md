@@ -16,10 +16,13 @@ Associated type
 Add vao runtime, phai co impl cho runtime voi 1 instance cu the
 Su dung associated type Balance cua Currency trait trong sc_service
 
+## Testing
+`cargo test -p pallet-demo`
+
 ## Benchmarking
 `cargo b -r --features runtime-benchmarks`
 
-`./target/release/node-template benchmark pallet --execution=wasm --wasm-execution=compiled --pallet pallet_kitties --extrinsic "*" --repeat 20 --output weight.rs`
+`./target/release/node-template benchmark pallet --execution=wasm --wasm-execution=compiled --pallet pallet_kitties --extrinsic "*" --repeat 20`` --output weight.rs`
 
 ## Getting Started
 
