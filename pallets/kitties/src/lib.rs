@@ -144,35 +144,44 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			// let number_of_kitty = &self.genesis_kitties;
-			// let i = 0;
-			// loop {
-			// 	if (i >= number_of_kitty) {
-			// 		break;
-			// 	}
-			// 	let current_id = KittyId::<T>::get();
-			// 	let next_id = current_id + 1;
-			//
-			// 	let nonce = Nonce::<T>::get();
-			// 	Nonce::<T>::put(nonce.wrapping_add(1));
-			// 	let nonce_encoded = nonce.encode();
-			// 	log::info!("nonce:{:?} and nonce_encoded:{:?}", nonce, nonce_encoded);
-			// 	let (dna_random, block_number) = T::RandomProvider::random(&nonce_encoded);
-			// 	log::info!("random at block_number:{:?}", block_number);
-			// 	let gender = Self::calculate_gender(b"hello".to_vec())?;
-			//
-			// 	let kitty = Kitty::<T> {
-			// 		name: "hello",
-			// 		dna: dna_random.clone(),
-			// 		price: 0u32.into(),
-			// 		gender,
-			// 		owner: alice_account,
-			// 		created_date: T::TimeProvider::now()
-			// 	};
-			// 	KittiesOwned::<T>::append(&alice_account, kitty.dna.clone());
-			// 	Kitties::<T>::insert(kitty.dna.clone(), kitty);
-			// 	KittyId::<T>::put(next_id);
-			// }
+			log::info!("JUMP to pallet_kitties genesis build");
+			if let Some(alice) = &self.alice_account {
+				if self.genesis_num_of_kitty_for_alice > 0u32 {
+					let mut i: u32 = 0;
+					loop {
+						if i >= self.genesis_num_of_kitty_for_alice {
+							break
+						}
+						let current_id = KittyId::<T>::get();
+						let next_id = current_id + 1;
+
+						let mut name: String = "alice_kitty_".to_owned();
+						let kitty_index: &str = &current_id.to_string();
+						name.push_str(&kitty_index);
+						log::info!("name: {:?}", name);
+						let nonce_encoded = name.encode();
+						log::info!("nonce_encoded: {:?}", nonce_encoded);
+						let (dna_random, _) = T::RandomProvider::random(&nonce_encoded);
+
+
+						let kitty = Kitty::<T> {
+							name: name.clone().as_bytes().to_vec(),
+							dna: dna_random.clone(),
+							price: 0u32.into(),
+							gender: Gender::Male,
+							owner: alice.clone(),
+							created_date: T::TimeProvider::now()
+						};
+						KittiesOwned::<T>::append(&alice, kitty.dna.clone());
+						Kitties::<T>::insert(kitty.dna.clone(), kitty);
+						KittyId::<T>::put(next_id);
+						i = i +1;
+					}
+					log::info!("Gen {} kitty for alice", self.genesis_num_of_kitty_for_alice);
+				} else {
+					log::info!("Do not gen any kitty for alice");
+				}
+			}
 		}
 	}
 
