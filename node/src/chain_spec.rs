@@ -161,7 +161,8 @@ fn testnet_genesis(
 			genesis_value:  9999u32
 		},
 		kitties: KittiesConfig {
-			genesis_kitties: 4
+			genesis_num_of_kitty_for_alice: 4,
+			alice_account: Some(get_account_id_from_seed::<sr25519::Public>("Alice"))
 		},
 	}
 }

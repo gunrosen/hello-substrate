@@ -24,7 +24,6 @@ use frame_support::traits::Time;
 use frame_support::traits::Get;
 use frame_support::traits::Randomness;
 use frame_support::dispatch::fmt;
-use sp_core::sr25519;
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 type MomentOf<T> =  <<T as Config>::TimeProvider as Time>::Moment;
@@ -128,20 +127,23 @@ pub mod pallet {
 	}
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig {
-		pub genesis_kitties: u32,
+	pub struct GenesisConfig<T: Config> {
+		pub genesis_num_of_kitty_for_alice: u32,
+		pub alice_account: Option<T::AccountId>,
 	}
 
 	#[cfg(feature = "std")]
-	impl Default for GenesisConfig {
+	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			GenesisConfig { genesis_kitties: 0u32}
+			GenesisConfig {
+				genesis_num_of_kitty_for_alice: 0u32,
+				alice_account: None,
+			}
 		}
 	}
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			// let alice_account = "//Alice"; //get_account_id_from_seed::<sr25519::Public>("Alice");
 			// let number_of_kitty = &self.genesis_kitties;
 			// let i = 0;
 			// loop {
