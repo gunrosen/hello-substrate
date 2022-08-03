@@ -42,6 +42,19 @@ pub mod pallet {
 		gender: Gender,
 		created_date: MomentOf<T>,
 	}
+	#[derive(Clone, Encode, Decode, PartialEq, TypeInfo, Debug)]
+	#[scale_info(skip_type_params(T))]
+	pub struct RandomInfo<T:Config> {
+		hash: T::Hash,
+		block_number: T::BlockNumber,
+	}
+
+	impl<T: Config> Default for RandomInfo<T> {
+		fn default() -> Self {
+			RandomInfo { hash: T::Hash::default(), block_number: T::BlockNumber::default() }
+		}
+	}
+
 	impl<T:Config> fmt::Debug for Kitty<T>{
 		fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 			f.debug_struct("Kitty")
@@ -100,6 +113,12 @@ pub mod pallet {
 	// Learn more about declaring storage items:
 	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
 	pub(super) type Nonce<T> = StorageValue<_, Id, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_random_number)]
+	// Learn more about declaring storage items:
+	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
+	pub type RandomNumber<T: Config> = StorageValue<_, RandomInfo<T>, ValueQuery>;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
@@ -162,11 +181,13 @@ pub mod pallet {
 						let nonce_encoded = name.encode();
 						log::info!("nonce_encoded: {:?}", nonce_encoded);
 						let (dna_random, _) = T::RandomProvider::random(&nonce_encoded);
-
+						log::info!("dna_random: {:?}", dna_random);
+						let (dna_random_2, _) = T::RandomProvider::random(&b"my context"[..]);
+						log::info!("dna_random_2: {:?}", dna_random_2);
 
 						let kitty = Kitty::<T> {
 							name: name.clone().as_bytes().to_vec(),
-							dna: dna_random.clone(),
+							dna: dna_random_2.clone(),
 							price: 0u32.into(),
 							gender: Gender::Male,
 							owner: alice.clone(),
@@ -249,6 +270,18 @@ pub mod pallet {
 			// log::info!("transfer successful: from {:?} to {:?}", &from, &to);
 
 			Self::deposit_event(Event::KittyTransferred{from, to, kitty: kitty.name , dna });
+			Ok(())
+		}
+
+		#[pallet::weight(0)]
+		pub fn random_number(_origin: OriginFor<T>) -> DispatchResult {
+			// anyone can random
+			let (_random_value, block_number) = T::RandomProvider::random(&b"seed sample"[..]);
+			let random_info = RandomInfo::<T> {
+				hash: _random_value,
+				block_number,
+			};
+			RandomNumber::<T>::put(random_info);
 			Ok(())
 		}
 	}
