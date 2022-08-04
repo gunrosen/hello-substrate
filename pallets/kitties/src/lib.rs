@@ -22,8 +22,9 @@ pub type Id = u32;
 use frame_support::traits::Currency;
 use frame_support::traits::Time;
 use frame_support::traits::Get;
-use frame_support::traits::Randomness;
+use frame_support::traits::Randomness as RandomnessT;
 use frame_support::dispatch::fmt;
+use sp_runtime::traits::Hash;
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 type MomentOf<T> =  <<T as Config>::TimeProvider as Time>::Moment;
@@ -82,7 +83,7 @@ pub mod pallet {
 		type TimeProvider: Time;
 		#[pallet::constant]
 		type KittyLimit: Get<u32>;
-		type RandomProvider: Randomness<Self::Hash, Self::BlockNumber>;
+		type RandomProvider: RandomnessT<Self::Hash, Self::BlockNumber>;
 	}
 
 	#[pallet::pallet]
@@ -180,14 +181,12 @@ pub mod pallet {
 						log::info!("name: {:?}", name);
 						let nonce_encoded = name.encode();
 						log::info!("nonce_encoded: {:?}", nonce_encoded);
-						let (dna_random, _) = T::RandomProvider::random(&nonce_encoded);
+						let dna_random = <T as frame_system::Config>::Hashing::hash(&nonce_encoded);
 						log::info!("dna_random: {:?}", dna_random);
-						let (dna_random_2, _) = T::RandomProvider::random(&b"my context"[..]);
-						log::info!("dna_random_2: {:?}", dna_random_2);
 
 						let kitty = Kitty::<T> {
 							name: name.clone().as_bytes().to_vec(),
-							dna: dna_random_2.clone(),
+							dna: dna_random,
 							price: 0u32.into(),
 							gender: Gender::Male,
 							owner: alice.clone(),
