@@ -206,10 +206,11 @@ pub mod pallet {
 			// Get nonce_encoded
 			let nonce = Nonce::<T>::get();
 			Nonce::<T>::put(nonce.wrapping_add(1));
-			let nonce_encoded = nonce.encode();
-			log::info!("nonce:{:?} and nonce_encoded:{:?}", nonce, nonce_encoded);
-			let (dna_random, block_number) = T::RandomProvider::random(&nonce_encoded);
-			log::info!("random at block_number:{:?}", block_number);
+			// let nonce_encoded = nonce.encode();
+			// log::info!("nonce:{:?} and nonce_encoded:{:?}", nonce, nonce_encoded);
+			// let (dna_random, block_number) = T::RandomProvider::random(&nonce_encoded);
+			// log::info!("random at block_number:{:?}", block_number);
+			let dna_random = Pallet::<T>::gen_dna(dna.clone());
 			let created_time = T::TimeProvider::now().saturated_into::<u64>();
 			let kitty = Kitty::<T> { name: dna.clone(), dna: dna_random.clone(), price: 0u32.into(), gender, owner: who.clone(), created_date: created_time  };
             ensure!(!Kitties::<T>::contains_key(&kitty.dna), Error::<T>::KittyDnaAlreadyExist);
@@ -270,13 +271,20 @@ pub mod pallet {
 	}
 }
 
-impl<T> Pallet<T> {
+impl<T:Config> Pallet<T> {
 	fn calculate_gender(dna: Vec<u8>) -> Result<Gender,Error<T>>{
 		let mut res = Gender::Female;
 		if dna.len() % 2 ==0 {
 			res = Gender::Male;
 		}
 		Ok(res)
+	}
+
+	fn gen_dna(kitty_name: Vec<u8>) -> T::Hash {
+		let (seed,block) = T::RandomProvider::random(&kitty_name);
+		let block_number = <frame_system::Pallet<T>>::block_number();
+		log::info!("seed: {:?}, block:{:?},  block_number: {:?}", seed, block, block_number);
+		T::Hashing::hash_of(&(seed, block_number))
 	}
 
 	// Use nonce in randomness implementation
