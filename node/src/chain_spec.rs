@@ -1,12 +1,13 @@
 use node_template_runtime::{
 	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, Signature, SudoConfig,
-	SystemConfig, WASM_BINARY,
+	SystemConfig, WASM_BINARY, TemplateModuleConfig, KittiesConfig,
 };
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -51,13 +52,18 @@ pub fn development_config() -> Result<ChainSpec, String> {
 				// Initial PoA authorities
 				vec![authority_keys_from_seed("Alice")],
 				// Sudo account
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				get_account_id_from_seed::<sr25519::Public>("Bob"),
 				// Pre-funded accounts
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Charlie"),
+					get_account_id_from_seed::<sr25519::Public>("Dave"),
+					get_account_id_from_seed::<sr25519::Public>("Eve"),
+					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+
 				],
 				true,
 			)
@@ -152,5 +158,20 @@ fn testnet_genesis(
 			key: Some(root_key),
 		},
 		transaction_payment: Default::default(),
+		template_module: TemplateModuleConfig {
+			genesis_value:  9999u32
+		},
+		kitties: KittiesConfig {
+			initial_time: SystemTime::now()
+				.duration_since(UNIX_EPOCH)
+				.unwrap()
+				.as_millis() as u64,
+			alice_account: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
+			initial_kitty_name: vec![b"kitty_awesome".to_vec(),
+									 b"kitty_intelligent".to_vec(),
+									 b"kitty_smart".to_vec(),
+									 b"kitty_pretty".to_vec(),
+									 b"kitty_0000".to_vec()]
+		},
 	}
 }

@@ -22,11 +22,13 @@ pub type Id = u32;
 use frame_support::traits::Currency;
 use frame_support::traits::Time;
 use frame_support::traits::Get;
-use frame_support::traits::Randomness;
+use frame_support::traits::Randomness as RandomnessT;
 use frame_support::dispatch::fmt;
+use sp_runtime::traits::Hash;
+use sp_runtime::SaturatedConversion;
+
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-type MomentOf<T> =  <<T as Config>::TimeProvider as Time>::Moment;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -40,8 +42,21 @@ pub mod pallet {
 		owner: T::AccountId,
 		price: BalanceOf<T>,
 		gender: Gender,
-		created_date: MomentOf<T>,
+		created_date: u64,
 	}
+	#[derive(Clone, Encode, Decode, PartialEq, TypeInfo, Debug)]
+	#[scale_info(skip_type_params(T))]
+	pub struct RandomInfo<T:Config> {
+		hash: T::Hash,
+		block_number: T::BlockNumber,
+	}
+
+	impl<T: Config> Default for RandomInfo<T> {
+		fn default() -> Self {
+			RandomInfo { hash: T::Hash::default(), block_number: T::BlockNumber::default() }
+		}
+	}
+
 	impl<T:Config> fmt::Debug for Kitty<T>{
 		fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 			f.debug_struct("Kitty")
@@ -69,7 +84,7 @@ pub mod pallet {
 		type TimeProvider: Time;
 		#[pallet::constant]
 		type KittyLimit: Get<u32>;
-		type RandomProvider: Randomness<Self::Hash, Self::BlockNumber>;
+		type RandomProvider: RandomnessT<Self::Hash, Self::BlockNumber>;
 	}
 
 	#[pallet::pallet]
@@ -101,6 +116,12 @@ pub mod pallet {
 	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
 	pub(super) type Nonce<T> = StorageValue<_, Id, ValueQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn get_random_number)]
+	// Learn more about declaring storage items:
+	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
+	pub type RandomNumber<T: Config> = StorageValue<_, RandomInfo<T>, ValueQuery>;
+
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
 	#[pallet::event]
@@ -126,6 +147,47 @@ pub mod pallet {
 		KittyOwnedTooLarge,
 	}
 
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub initial_kitty_name: Vec<Vec<u8>>,
+		pub alice_account: Option<T::AccountId>,
+		pub initial_time: u64,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			GenesisConfig {
+				initial_kitty_name: Vec::new(),
+				alice_account: None,
+				initial_time: 0,
+			}
+		}
+	}
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			log::info!("JUMP to pallet_kitties genesis build");
+			if let Some(alice) = &self.alice_account {
+				for kitty_name in self.initial_kitty_name.iter() {
+					let kitty = Kitty::<T> {
+						owner: alice.clone(),
+						name: kitty_name.clone(),
+						dna: <T as frame_system::Config>::Hashing::hash(&kitty_name),
+						gender: Pallet::<T>::calculate_gender(kitty_name.to_vec()).unwrap(),
+						created_date: self.initial_time,
+						price: 99u32.into(),
+					};
+					let current_id = KittyId::<T>::get();
+					let next_id = current_id + 1;
+					KittiesOwned::<T>::append(&alice, kitty.dna.clone());
+					Kitties::<T>::insert(kitty.dna.clone(), kitty);
+					KittyId::<T>::put(next_id);
+				}
+			}
+		}
+	}
+
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
 	// These functions materialize as "extrinsics", which are often compared to transactions.
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
@@ -140,15 +202,17 @@ pub mod pallet {
 			// https://docs.substrate.io/v3/runtime/origins
 			let who = ensure_signed(origin)?;
 			log::info!("total balance:{:?}", T::Currency::total_balance(&who));
-			let gender = Self::calculate_gender(&dna)?;
+			let gender = Self::calculate_gender(dna.clone())?;
 			// Get nonce_encoded
 			let nonce = Nonce::<T>::get();
 			Nonce::<T>::put(nonce.wrapping_add(1));
-			let nonce_encoded = nonce.encode();
-			log::info!("nonce:{:?} and nonce_encoded:{:?}", nonce, nonce_encoded);
-			let (dna_random, block_number) = T::RandomProvider::random(&nonce_encoded);
-			log::info!("random at block_number:{:?}", block_number);
-			let kitty = Kitty::<T> { name: dna.clone(), dna: dna_random.clone(), price: 0u32.into(), gender, owner: who.clone(), created_date: T::TimeProvider::now()  };
+			// let nonce_encoded = nonce.encode();
+			// log::info!("nonce:{:?} and nonce_encoded:{:?}", nonce, nonce_encoded);
+			// let (dna_random, block_number) = T::RandomProvider::random(&nonce_encoded);
+			// log::info!("random at block_number:{:?}", block_number);
+			let dna_random = Pallet::<T>::gen_dna(dna.clone());
+			let created_time = T::TimeProvider::now().saturated_into::<u64>();
+			let kitty = Kitty::<T> { name: dna.clone(), dna: dna_random.clone(), price: 0u32.into(), gender, owner: who.clone(), created_date: created_time  };
             ensure!(!Kitties::<T>::contains_key(&kitty.dna), Error::<T>::KittyDnaAlreadyExist);
 			ensure!(KittiesOwned::<T>::get(&who).len() < T::KittyLimit::get() as usize, Error::<T>::KittyOwnedTooLarge);
             let current_id = KittyId::<T>::get();
@@ -192,16 +256,35 @@ pub mod pallet {
 			Self::deposit_event(Event::KittyTransferred{from, to, kitty: kitty.name , dna });
 			Ok(())
 		}
+
+		#[pallet::weight(0)]
+		pub fn random_number(_origin: OriginFor<T>) -> DispatchResult {
+			// anyone can random
+			let (_random_value, block_number) = T::RandomProvider::random(&b"seed sample"[..]);
+			let random_info = RandomInfo::<T> {
+				hash: _random_value,
+				block_number,
+			};
+			RandomNumber::<T>::put(random_info);
+			Ok(())
+		}
 	}
 }
 
-impl<T> Pallet<T> {
-	fn calculate_gender(dna: &Vec<u8>) -> Result<Gender,Error<T>>{
+impl<T:Config> Pallet<T> {
+	fn calculate_gender(dna: Vec<u8>) -> Result<Gender,Error<T>>{
 		let mut res = Gender::Female;
 		if dna.len() % 2 ==0 {
 			res = Gender::Male;
 		}
 		Ok(res)
+	}
+
+	fn gen_dna(kitty_name: Vec<u8>) -> T::Hash {
+		let (seed,block) = T::RandomProvider::random(&kitty_name);
+		let block_number = <frame_system::Pallet<T>>::block_number();
+		log::info!("seed: {:?}, block:{:?},  block_number: {:?}", seed, block, block_number);
+		T::Hashing::hash_of(&(seed, block_number))
 	}
 
 	// Use nonce in randomness implementation
