@@ -25,9 +25,10 @@ use frame_support::traits::Get;
 use frame_support::traits::Randomness as RandomnessT;
 use frame_support::dispatch::fmt;
 use sp_runtime::traits::Hash;
+use sp_runtime::SaturatedConversion;
+
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-type MomentOf<T> =  <<T as Config>::TimeProvider as Time>::Moment;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -41,7 +42,7 @@ pub mod pallet {
 		owner: T::AccountId,
 		price: BalanceOf<T>,
 		gender: Gender,
-		created_date: MomentOf<T>,
+		created_date: u64,
 	}
 	#[derive(Clone, Encode, Decode, PartialEq, TypeInfo, Debug)]
 	#[scale_info(skip_type_params(T))]
@@ -148,16 +149,18 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub genesis_num_of_kitty_for_alice: u32,
+		pub initial_kitty_name: Vec<Vec<u8>>,
 		pub alice_account: Option<T::AccountId>,
+		pub initial_time: u64,
 	}
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			GenesisConfig {
-				genesis_num_of_kitty_for_alice: 0u32,
+				initial_kitty_name: Vec::new(),
 				alice_account: None,
+				initial_time: 0,
 			}
 		}
 	}
@@ -166,40 +169,20 @@ pub mod pallet {
 		fn build(&self) {
 			log::info!("JUMP to pallet_kitties genesis build");
 			if let Some(alice) = &self.alice_account {
-				if self.genesis_num_of_kitty_for_alice > 0u32 {
-					let mut i: u32 = 0;
-					loop {
-						if i >= self.genesis_num_of_kitty_for_alice {
-							break
-						}
-						let current_id = KittyId::<T>::get();
-						let next_id = current_id + 1;
-
-						let mut name: String = "alice_kitty_".to_owned();
-						let kitty_index: &str = &current_id.to_string();
-						name.push_str(&kitty_index);
-						log::info!("name: {:?}", name);
-						let nonce_encoded = name.encode();
-						log::info!("nonce_encoded: {:?}", nonce_encoded);
-						let dna_random = <T as frame_system::Config>::Hashing::hash(&nonce_encoded);
-						log::info!("dna_random: {:?}", dna_random);
-
-						let kitty = Kitty::<T> {
-							name: name.clone().as_bytes().to_vec(),
-							dna: dna_random,
-							price: 0u32.into(),
-							gender: Gender::Male,
-							owner: alice.clone(),
-							created_date: T::TimeProvider::now()
-						};
-						KittiesOwned::<T>::append(&alice, kitty.dna.clone());
-						Kitties::<T>::insert(kitty.dna.clone(), kitty);
-						KittyId::<T>::put(next_id);
-						i = i +1;
-					}
-					log::info!("Gen {} kitty for alice", self.genesis_num_of_kitty_for_alice);
-				} else {
-					log::info!("Do not gen any kitty for alice");
+				for kitty_name in self.initial_kitty_name.iter() {
+					let kitty = Kitty::<T> {
+						owner: alice.clone(),
+						name: kitty_name.clone(),
+						dna: <T as frame_system::Config>::Hashing::hash(&kitty_name),
+						gender: Pallet::<T>::calculate_gender(kitty_name.to_vec()).unwrap(),
+						created_date: self.initial_time,
+						price: 99u32.into(),
+					};
+					let current_id = KittyId::<T>::get();
+					let next_id = current_id + 1;
+					KittiesOwned::<T>::append(&alice, kitty.dna.clone());
+					Kitties::<T>::insert(kitty.dna.clone(), kitty);
+					KittyId::<T>::put(next_id);
 				}
 			}
 		}
@@ -219,7 +202,7 @@ pub mod pallet {
 			// https://docs.substrate.io/v3/runtime/origins
 			let who = ensure_signed(origin)?;
 			log::info!("total balance:{:?}", T::Currency::total_balance(&who));
-			let gender = Self::calculate_gender(&dna)?;
+			let gender = Self::calculate_gender(dna.clone())?;
 			// Get nonce_encoded
 			let nonce = Nonce::<T>::get();
 			Nonce::<T>::put(nonce.wrapping_add(1));
@@ -227,7 +210,8 @@ pub mod pallet {
 			log::info!("nonce:{:?} and nonce_encoded:{:?}", nonce, nonce_encoded);
 			let (dna_random, block_number) = T::RandomProvider::random(&nonce_encoded);
 			log::info!("random at block_number:{:?}", block_number);
-			let kitty = Kitty::<T> { name: dna.clone(), dna: dna_random.clone(), price: 0u32.into(), gender, owner: who.clone(), created_date: T::TimeProvider::now()  };
+			let created_time = T::TimeProvider::now().saturated_into::<u64>();
+			let kitty = Kitty::<T> { name: dna.clone(), dna: dna_random.clone(), price: 0u32.into(), gender, owner: who.clone(), created_date: created_time  };
             ensure!(!Kitties::<T>::contains_key(&kitty.dna), Error::<T>::KittyDnaAlreadyExist);
 			ensure!(KittiesOwned::<T>::get(&who).len() < T::KittyLimit::get() as usize, Error::<T>::KittyOwnedTooLarge);
             let current_id = KittyId::<T>::get();
@@ -287,7 +271,7 @@ pub mod pallet {
 }
 
 impl<T> Pallet<T> {
-	fn calculate_gender(dna: &Vec<u8>) -> Result<Gender,Error<T>>{
+	fn calculate_gender(dna: Vec<u8>) -> Result<Gender,Error<T>>{
 		let mut res = Gender::Female;
 		if dna.len() % 2 ==0 {
 			res = Gender::Male;
